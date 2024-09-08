@@ -48,7 +48,18 @@ def parse_mnist(image_filename, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR CODE
-    pass
+    with gzip.open(image_filename, 'rb') as img_file:
+        magic_num, img_num, row, col = struct.unpack(">4i", img_file.read(16))
+        assert magic_num == 2051
+        X = np.frombuffer(img_file.read(), dtype=np.uint8).astype(np.float32).reshape((img_num, row * col))
+        X /= 255.0
+    
+    with gzip.open(label_filename, 'rb') as label_file:
+        magic_num, label_num = struct.unpack(">2i", label_file.read(8))
+        assert magic_num == 2049
+        y = np.frombuffer(label_file.read(), dtype=np.uint8).reshape((label_num))
+    
+    return X, y
     ### END YOUR CODE
 
 
@@ -165,10 +176,10 @@ def train_nn(X_tr, y_tr, X_te, y_te, hidden_dim = 500,
 
 
 if __name__ == "__main__":
-    X_tr, y_tr = parse_mnist("data/train-images-idx3-ubyte.gz",
-                             "data/train-labels-idx1-ubyte.gz")
-    X_te, y_te = parse_mnist("data/t10k-images-idx3-ubyte.gz",
-                             "data/t10k-labels-idx1-ubyte.gz")
+    X_tr, y_tr = parse_mnist("../data/train-images-idx3-ubyte.gz",
+                             "../data/train-labels-idx1-ubyte.gz")
+    X_te, y_te = parse_mnist("../data/t10k-images-idx3-ubyte.gz",
+                             "../data/t10k-labels-idx1-ubyte.gz")
 
     print("Training softmax regression")
     train_softmax(X_tr, y_tr, X_te, y_te, epochs=10, lr = 0.1)
