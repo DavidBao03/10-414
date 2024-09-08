@@ -51,13 +51,13 @@ def parse_mnist(image_filename, label_filename):
     with gzip.open(image_filename, 'rb') as img_file:
         magic_num, img_num, row, col = struct.unpack(">4i", img_file.read(16))
         assert magic_num == 2051
-        X = np.frombuffer(img_file.read(), dtype=np.uint8).astype(np.float32).reshape((img_num, row * col))
+        X = np.frombuffer(img_file.read(img_num * row * col), dtype=np.uint8).astype(np.float32).reshape((img_num, row * col))
         X /= 255.0
     
     with gzip.open(label_filename, 'rb') as label_file:
         magic_num, label_num = struct.unpack(">2i", label_file.read(8))
         assert magic_num == 2049
-        y = np.frombuffer(label_file.read(), dtype=np.uint8).reshape((label_num))
+        y = np.frombuffer(label_file.read(label_num), dtype=np.uint8)
     
     return X, y
     ### END YOUR CODE
@@ -104,7 +104,22 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    iterations = (y.size + batch - 1) // batch
+    for i in range(iterations):
+        train_set = X[i * batch : (i+1) * batch, :]
+        label_set = y[i * batch : (i+1) * batch]
+
+        Z = np.exp(train_set @ theta)
+        z = Z / np.sum(Z, axis=1, keepdims=True)
+        
+        Y = np.zeros((batch, theta.shape[1]))
+        Y[np.arange(batch), label_set] = 1
+
+        gradient = (train_set.T @ (z - Y)) / batch
+        
+        assert gradient.shape == theta.shape
+
+        theta -= lr * gradient
     ### END YOUR CODE
 
 
