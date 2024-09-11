@@ -31,9 +31,57 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
      * Returns:
      *     (None)
      */
-
     /// BEGIN YOUR CODE
+    float* Z = new float[batch * k];
+    float* x_T = new float[batch * n];
+    float* grad = new float[n * k];
 
+    int iterations = (m + batch - 1) / batch;
+    for (int i = 0; i < iterations; i++) {
+        int start = i * batch;
+        const float* trian_set = &X[start * n];
+
+        for (int i = 0; i < batch; i++) {
+            for (int j = 0; j < k; j++) {
+                Z[i * k + j] = 0;
+                for (int t = 0; t < n; t++) {
+                    Z[i * k + j] += trian_set[i * n + t] * theta[t * k + j];
+                }
+            }
+        }
+
+        for (int i = 0; i < batch * k; i++) Z[i] = exp(Z[i]);
+        for (int i = 0; i < batch; i++) {
+            float sum = 0;
+            for (int j = 0; j < k; j++) sum += Z[i * k + j];
+            for (int j = 0; j < k; j++) Z[i * k + j] /= sum;
+        }
+
+        for (int i = 0; i < batch; i++) {
+            Z[i * k + y[start + i]] -= 1;
+        }
+
+        for (int i = 0; i < batch; i++) 
+            for (int j = 0; j < n; j++) 
+                x_T[j * batch + i] = trian_set[i * n + j];
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < k; j++) {
+                grad[i * k + j] = 0;
+                for (int t = 0; t < batch; t++) {
+                    grad[i * k + j] += x_T[i * batch + t] * Z[t * k + j];
+                }
+            }
+        }
+
+        for (int i = 0; i < n * k; i++) {
+            theta[i] -= lr * grad[i] / batch;
+        }
+    }
+
+    delete[] Z;
+    delete[] grad;
+    delete[] x_T;
     /// END YOUR CODE
 }
 
