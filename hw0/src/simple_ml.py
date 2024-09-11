@@ -146,7 +146,30 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    iterations = (y.size + batch - 1) // batch
+    for i in range(iterations):
+        train_set = X[i * batch : (i+1) * batch, :]
+        label_set = y[i * batch : (i+1) * batch]
+
+        Z1 = np.maximum(train_set @ W1, 0)
+
+        G2 = np.exp(Z1 @ W2)
+        G2 = G2 / np.sum(G2, axis=1, keepdims=True)
+
+        Y = np.zeros((batch, W2.shape[1]))
+        Y[np.arange(batch), label_set] = 1
+        G2 = G2 - Y
+        
+        G1 = (Z1 > 0) * (G2 @ W2.T)
+
+        w1_gradient = (train_set.T @ G1) / batch
+        w2_gradient = (Z1.T @ G2) / batch
+        
+        assert w1_gradient.shape == W1.shape
+        assert w2_gradient.shape == W2.shape
+
+        W1 -= lr * w1_gradient
+        W2 -= lr * w2_gradient
     ### END YOUR CODE
 
 
