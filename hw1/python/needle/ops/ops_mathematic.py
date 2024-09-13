@@ -202,7 +202,6 @@ class BroadcastTo(TensorOp):
         target_shape = node.inputs[0].shape
         axes = list(range(len(ori_shape)))
         for i, (ori, trg) in enumerate(zip(reversed(ori_shape), reversed(target_shape))):
-            print(i)
             if ori == trg:
                 axes[len(target_shape) - i - 1] = -1
         axes = tuple(filter(lambda x: x >= 0, axes))
@@ -310,12 +309,14 @@ def exp(a):
 class ReLU(TensorOp):
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.maximum(a, 0)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        out = node.realize_cached_data().copy()
+        out[out > 0] = 1
+        return out_grad * Tensor(out)
         ### END YOUR SOLUTION
 
 
