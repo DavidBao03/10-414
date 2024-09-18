@@ -203,7 +203,7 @@ class BroadcastTo(TensorOp):
         axes = list(range(len(ori_shape)))
         for i, (ori, trg) in enumerate(zip(reversed(ori_shape), reversed(target_shape))):
             if ori == trg:
-                axes[len(target_shape) - i - 1] = -1
+                axes[len(ori_shape) - i - 1] = -1
         axes = tuple(filter(lambda x: x >= 0, axes))
         return out_grad.sum(axes).reshape(target_shape)
         ### END YOUR SOLUTION
