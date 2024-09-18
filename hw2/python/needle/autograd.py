@@ -18,7 +18,6 @@ import numpy as array_api
 NDArray = numpy.ndarray
 
 
-
 class Op:
     """Operator definition."""
 
@@ -188,7 +187,7 @@ class TensorTuple(Value):
 
     def detach(self):
         """Create a new tensor that shares the data but detaches from the graph."""
-        return Tuple.make_const(self.realize_cached_data())
+        return TensorTuple.make_const(self.realize_cached_data())
 
 
 class Tensor(Value):
@@ -365,6 +364,8 @@ class Tensor(Value):
     __rmatmul__ = __matmul__
 
 
+
+
 def compute_gradient_of_variables(output_tensor, out_grad):
     """Take gradient of output node with respect to each node in node_list.
 
@@ -381,7 +382,18 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     reverse_topo_order = list(reversed(find_topo_sort([output_tensor])))
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    for node in reverse_topo_order:
+        ajoint = sum_node_list(node_to_output_grads_list[node])
+        node.grad = ajoint
+        
+        if node.op is None:
+            continue
+
+        parial_ajoint = node.op.gradient_as_tuple(ajoint, node)
+        for input, parial in zip(node.inputs, parial_ajoint):
+            if input not in node_to_output_grads_list:
+                node_to_output_grads_list[input] = []
+            node_to_output_grads_list[input].append(parial)
     ### END YOUR SOLUTION
 
 
@@ -394,14 +406,24 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     sort.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    anwser = []
+    visited = set()
+    for node in node_list:
+            topo_sort_dfs(node, visited, anwser)
+    return anwser
     ### END YOUR SOLUTION
 
 
 def topo_sort_dfs(node, visited, topo_order):
     """Post-order DFS"""
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    if node in visited:
+        return
+    visited.add(node)
+    for input in node.inputs:
+        if input not in visited:
+            topo_sort_dfs(input, visited, topo_order)
+    topo_order.append(node)
     ### END YOUR SOLUTION
 
 
