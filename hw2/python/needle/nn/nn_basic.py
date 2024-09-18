@@ -130,7 +130,8 @@ class Sequential(Module):
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        one_hot_y = init.one_hot(logits.shape[1], y)
+        return (ops.summation(ops.logsumexp(logits, (1,)) / logits.shape[0])) - ops.summation(one_hot_y * logits / logits.shape[0])
         ### END YOUR SOLUTION
 
 
