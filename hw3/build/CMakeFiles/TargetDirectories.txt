@@ -1,0 +1,3 @@
+/Users/david_bao/Desktop/SelfLearn/10-414/hw3/build/CMakeFiles/ndarray_backend_cpu.dir
+/Users/david_bao/Desktop/SelfLearn/10-414/hw3/build/CMakeFiles/edit_cache.dir
+/Users/david_bao/Desktop/SelfLearn/10-414/hw3/build/CMakeFiles/rebuild_cache.dir
