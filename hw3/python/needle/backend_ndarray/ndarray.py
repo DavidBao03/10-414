@@ -4,6 +4,7 @@ from functools import reduce
 import numpy as np
 from . import ndarray_backend_numpy
 from . import ndarray_backend_cpu
+import builtins
 
 
 # math.prod not in Python 3.7
@@ -247,7 +248,10 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if not self.is_compact() or prod(new_shape) != prod(self.shape):
+            raise ValueError("cannot reshape")
+        
+        return self.as_strided(new_shape, NDArray.compact_strides(new_shape))
         ### END YOUR SOLUTION
 
     def permute(self, new_axes):
@@ -272,7 +276,9 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = tuple(np.array(self.shape)[list(new_axes)])
+        new_stride = tuple(np.array(self._strides)[list(new_axes)])
+        return self.as_strided(new_shape, new_stride)
         ### END YOUR SOLUTION
 
     def broadcast_to(self, new_shape):
@@ -296,7 +302,16 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        assert(len(self._shape) == len(new_shape))
+        for x, y in zip(self._shape, new_shape):
+            assert(x == y or x == 1)
+        
+        new_strides = list(self._strides)
+        for i, dim in enumerate(self._shape):
+            if dim == 1:
+                new_strides[i] = 0
+
+        return self.as_strided(new_shape, tuple(new_strides))
         ### END YOUR SOLUTION
 
     ### Get and set elements
@@ -363,7 +378,11 @@ class NDArray:
         assert len(idxs) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = tuple([(s.stop - s.start + s.step - 1) // s.step for s in idxs])
+        new_strides = tuple([s.step * st for s, st in zip(idxs, self._strides)])
+        new_offset = builtins.sum([s.start * st for s, st in zip(idxs, self._strides)])
+
+        return NDArray.make(new_shape, new_strides, self._device, self._handle, new_offset)
         ### END YOUR SOLUTION
 
     def __setitem__(self, idxs, other):
