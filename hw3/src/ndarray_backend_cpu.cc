@@ -43,6 +43,42 @@ void Fill(AlignedArray* out, scalar_t val) {
   }
 }
 
+enum OP_MODE {W_IN, W_OUT, SET};
+
+void Helper(const AlignedArray* a, AlignedArray* out, std::vector<int32_t> shape,
+                    std::vector<int32_t> strides, size_t offset, scalar_t val, OP_MODE mode) {
+  int size = shape.size();
+  std::vector<uint32_t> loops(size, 0);
+  int cnt = 0;
+
+  while(true) {
+    int index = offset;
+    for (int i = 0; i < loops.size(); i++) {
+      index += loops[i] * strides[i];
+    }
+
+    switch (mode)
+    {
+    case W_IN: out->ptr[cnt++] = a->ptr[index]; break;
+    case W_OUT: out->ptr[index] = a->ptr[cnt++]; break;
+    case SET: out->ptr[index] = val; break;
+    default: break;
+    }
+    
+
+    for (int i = loops.size() - 1; i >= 0; i--) {
+      if (loops[i] < shape[i] - 1) {
+        loops[i]++;
+        break;
+      } else if (i == 0) {
+        return;
+      } else {
+        loops[i] = 0;
+      }
+    }
+  }
+}
+
 
 
 void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shape,
@@ -62,7 +98,7 @@ void Compact(const AlignedArray& a, AlignedArray* out, std::vector<int32_t> shap
    *  function will implement here, so we won't repeat this note.)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  Helper(&a, out, shape, strides, offset, 0, W_IN);
   /// END SOLUTION
 }
 
@@ -79,7 +115,7 @@ void EwiseSetitem(const AlignedArray& a, AlignedArray* out, std::vector<int32_t>
    *   offset: offset of the *out* array (not a, which has zero offset, being compact)
    */
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  Helper(&a, out, shape, strides, offset, 0, W_OUT);
   /// END SOLUTION
 }
 
@@ -100,7 +136,7 @@ void ScalarSetitem(const size_t size, scalar_t val, AlignedArray* out, std::vect
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  Helper(nullptr, out, shape, strides, offset, val, SET);
   /// END SOLUTION
 }
 
