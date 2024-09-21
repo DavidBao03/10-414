@@ -438,6 +438,7 @@ void ReduceSum(const AlignedArray& a, AlignedArray* out, size_t reduce_size) {
   /// BEGIN SOLUTION
   int cnt = 0;
   for (int i = 0; i < a.size; i += reduce_size) {
+    out->ptr[cnt] = 0;
     for (int j = 0; j < reduce_size; j++) {
       out->ptr[cnt] += a.ptr[i + j];
     }
