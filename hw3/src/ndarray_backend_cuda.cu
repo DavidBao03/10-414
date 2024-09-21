@@ -410,6 +410,45 @@ void EwiseTanh(const CudaArray& a, CudaArray* out) {
 // Elementwise and scalar operations
 ////////////////////////////////////////////////////////////////////////////////
 
+__global__ void MatMulKernel(scalar_t* a, scalar_t* b, scalar_t* out, uint32_t M, uint32_t N, uint32_t P) {
+  __shared__ scalar_t a_tile[TILE][TILE];
+  __shared__ scalar_t b_tile[TILE][TILE];
+
+  size_t thread_x = threadIdx.x;
+  size_t thread_y = threadIdx.y;
+
+  size_t block_x = blockIdx.x;
+  size_t block_y = blockIdx.y;
+
+  size_t x = thread_x + block_x * blockDim.x;
+  size_t y = thread_y + block_y * blockDim.y;
+
+  size_t cnt = (N + TILE -1) / TILE;
+  scalar_t sum = 0;
+
+  for(size_t i = 0; i < cnt; i++)
+  {
+    if((i * TILE + thread_y) < N)
+      a_tile[thread_x][thread_y] = a[x * N + i * TILE + thread_y];
+
+    if((i * TILE + thread_x) < N)
+      b_tile[thread_x][thread_y] = b[y + (i * TILE + thread_x) * P];
+
+    __syncthreads();
+
+    if (x < M && y < P)
+    {
+      for(size_t j = 0; j < TILE; j++)
+        if(i * TILE + j < N)
+          sum += a_tile[thread_x][j] * b_tile[j][thread_y]; 
+    }
+
+    __syncthreads();
+  }
+
+  if (x < M && y < P)
+    out[x * P + y] = sum;
+}
 
 void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, uint32_t N,
             uint32_t P) {
@@ -436,7 +475,11 @@ void Matmul(const CudaArray& a, const CudaArray& b, CudaArray* out, uint32_t M, 
    */
 
   /// BEGIN SOLUTION
-  assert(false && "Not Implemented");
+  dim3 block = dim3(TILE, TILE, 1);
+  size_t grid_x = (M + TILE -1) / TILE;
+  size_t grid_y = (P + TILE -1) / TILE;
+  dim3 grid = dim3(grid_x, grid_y, 1);
+  MatMulKernel<<<grid, block>>>(a.ptr, b.ptr, out->ptr, M, N, P);
   /// END SOLUTION
 }
 
@@ -547,25 +590,25 @@ PYBIND11_MODULE(ndarray_backend_cuda, m) {
   m.def("ewise_add", EwiseAdd);
   m.def("scalar_add", ScalarAdd);
 
-  // m.def("ewise_mul", EwiseMul);
-  // m.def("scalar_mul", ScalarMul);
-  // m.def("ewise_div", EwiseDiv);
-  // m.def("scalar_div", ScalarDiv);
-  // m.def("scalar_power", ScalarPower);
+  m.def("ewise_mul", EwiseMul);
+  m.def("scalar_mul", ScalarMul);
+  m.def("ewise_div", EwiseDiv);
+  m.def("scalar_div", ScalarDiv);
+  m.def("scalar_power", ScalarPower);
 
-  // m.def("ewise_maximum", EwiseMaximum);
-  // m.def("scalar_maximum", ScalarMaximum);
-  // m.def("ewise_eq", EwiseEq);
-  // m.def("scalar_eq", ScalarEq);
-  // m.def("ewise_ge", EwiseGe);
-  // m.def("scalar_ge", ScalarGe);
+  m.def("ewise_maximum", EwiseMaximum);
+  m.def("scalar_maximum", ScalarMaximum);
+  m.def("ewise_eq", EwiseEq);
+  m.def("scalar_eq", ScalarEq);
+  m.def("ewise_ge", EwiseGe);
+  m.def("scalar_ge", ScalarGe);
 
-  // m.def("ewise_log", EwiseLog);
-  // m.def("ewise_exp", EwiseExp);
-  // m.def("ewise_tanh", EwiseTanh);
+  m.def("ewise_log", EwiseLog);
+  m.def("ewise_exp", EwiseExp);
+  m.def("ewise_tanh", EwiseTanh);
 
-  // m.def("matmul", Matmul);
+  m.def("matmul", Matmul);
 
-  // m.def("reduce_max", ReduceMax);
-  // m.def("reduce_sum", ReduceSum);
+  m.def("reduce_max", ReduceMax);
+  m.def("reduce_sum", ReduceSum);
 }
