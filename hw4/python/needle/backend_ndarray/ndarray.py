@@ -4,6 +4,7 @@ from functools import reduce
 import numpy as np
 from . import ndarray_backend_numpy
 from . import ndarray_backend_cpu
+import builtins
 
 
 # math.prod not in Python 3.7
@@ -247,7 +248,10 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        if not self.is_compact() or prod(new_shape) != prod(self.shape):
+            raise ValueError("cannot reshape")
+        
+        return self.as_strided(new_shape, NDArray.compact_strides(new_shape))
         ### END YOUR SOLUTION
 
     def permute(self, new_axes):
@@ -272,7 +276,9 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = tuple(np.array(self.shape)[list(new_axes)])
+        new_stride = tuple(np.array(self._strides)[list(new_axes)])
+        return self.as_strided(new_shape, new_stride)
         ### END YOUR SOLUTION
 
     def broadcast_to(self, new_shape):
@@ -296,7 +302,14 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for x, y in zip(self._shape, new_shape):
+            assert(x == y or x == 1)
+        
+        new_strides = list(self._strides)
+        for i in range(len(self._shape)):
+            if self._shape[i] != new_shape[i]:
+                new_strides[i] = 0
+        return NDArray.make(new_shape, tuple(new_strides), self._device, self._handle)
         ### END YOUR SOLUTION
 
     ### Get and set elements
@@ -363,7 +376,11 @@ class NDArray:
         assert len(idxs) == self.ndim, "Need indexes equal to number of dimensions"
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        new_shape = tuple([(s.stop - s.start + s.step - 1) // s.step for s in idxs])
+        new_strides = tuple([s.step * st for s, st in zip(idxs, self._strides)])
+        new_offset = builtins.sum([s.start * st for s, st in zip(idxs, self._strides)])
+
+        return NDArray.make(new_shape, new_strides, self._device, self._handle, new_offset)
         ### END YOUR SOLUTION
 
     def __setitem__(self, idxs, other):
@@ -633,3 +650,32 @@ def sum(a, axis=None, keepdims=False):
 
 def flip(a, axes):
     return a.flip(axes)
+
+def summation(a, axis=None, keepdims=False):
+    return a.sum(axis=axis, keepdims=keepdims)
+
+def stack(arrays, axis:int = 0):
+    out_shape = list(arrays[0].shape)
+    out_shape.insert(axis, len(arrays))
+
+    out = empty(out_shape, dtype=arrays[0].dtype, device=arrays[0].device)
+
+    target_slice = [slice(None)] * len(out_shape)
+    for i, array in enumerate(arrays):
+        target_slice[axis] = i
+        out[tuple(target_slice)] = array
+    
+    return out
+
+def split(a, axis:int = 0):
+    out_shape = list(a.shape)
+    out_shape.pop(axis)
+
+    out_arrays = []
+
+    target_slice = [slice(None)] * len(a.shape)
+    for i in range(a.shape[axis]):
+        target_slice[axis] = i
+        out_arrays.append(a[tuple(target_slice)].compact().reshape(out_shape))
+    
+    return out_arrays

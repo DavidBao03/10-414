@@ -4,3 +4,4 @@ __pycache__/
 .DS_Store
 build/
 build/CMakeFiles
+data
