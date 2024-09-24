@@ -615,7 +615,7 @@ class NDArray:
         """
         ### BEGIN YOUR SOLUTION
         out_shape = tuple([dim + axis[0] + axis[1] for dim, axis in zip(self.shape, axes)])
-        out = empty(out_shape, dtype=self.dtype, device=self.device)
+        out = full(out_shape, 0.0, dtype=self.dtype, device=self.device)
         tuple_slice = tuple([slice(axis[0], axis[0] + dim) for dim, axis in zip(self.shape, axes)])
         out[tuple_slice] = self
         return out
@@ -676,7 +676,7 @@ def stack(arrays, axis:int = 0):
     out_shape = list(arrays[0].shape)
     out_shape.insert(axis, len(arrays))
 
-    out = empty(out_shape, dtype=arrays[0].dtype, device=arrays[0].device)
+    out = full(out_shape, 0.0, dtype=arrays[0].dtype, device=arrays[0].device)
 
     target_slice = [slice(None)] * len(out_shape)
     for i, array in enumerate(arrays):

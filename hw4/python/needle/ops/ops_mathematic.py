@@ -7,6 +7,7 @@ from ..autograd import NDArray
 from ..autograd import Op, Tensor, Value, TensorOp
 from ..autograd import TensorTuple, TensorTupleOp
 import numpy
+import math
 
 # NOTE: we will import numpy as the array_api
 # as the backend for our computations, this line will change in later homeworks
@@ -430,12 +431,21 @@ class Dilate(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        out_shape = list(a.shape)
+        slices = [slice(None)] * len(a.shape)
+        for axis in self.axes:
+            out_shape[axis] *= (self.dilation + 1)
+            slices[axis] = slice(None, None, self.dilation + 1)
+        
+        out = array_api.full(out_shape, 0.0, dtype=a.dtype, device=a.device)
+        
+        out[tuple(slices)] = a
+        return out
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return undilate(out_grad, self.axes, self.dilation)
         ### END YOUR SOLUTION
 
 
@@ -450,12 +460,16 @@ class UnDilate(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        slices = [slice(None)] * len(a.shape)
+        for axis in self.axes:
+            slices[axis] = slice(None, None, self.dilation + 1)
+        
+        return a[tuple(slices)]
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return dilate(out_grad, self.axes, self.dilation)
         ### END YOUR SOLUTION
 
 
@@ -470,7 +484,26 @@ class Conv(TensorOp):
 
     def compute(self, A, B):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        pad_axes = [(0,0)] + [(self.padding, self.padding)] * (A.ndim - 2) + [(0, 0)]
+        A = A.pad(pad_axes)
+
+        N, H, W, C_in = A.shape
+        K, _, _, C_out = B.shape
+        Ns, Hs, Ws, Cs = A.strides
+
+        if self.stride > 1:
+            H_new = (H - K + 1) // self.stride
+            W_new = (W - K + 1) // self.stride
+            A = A.as_strided((N, H_new, W_new, K, K, C_in), strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs)).compact()
+            A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
+            B = B.compact().reshape((K * K * C_in, C_out))
+        else:
+            H_new = H - K + 1
+            W_new = W - K + 1
+            A = A.as_strided((N, H_new, W_new, K, K, C_in), strides=(Ns, Hs, Ws, Hs, Ws, Cs)).compact()
+            A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
+            B = B.compact().reshape((K * K * C_in, C_out))
+        return A @ B
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
