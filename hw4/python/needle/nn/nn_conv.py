@@ -6,6 +6,7 @@ from needle import ops
 import needle.init as init
 import numpy as np
 from .nn_basic import Parameter, Module
+import math
 
 
 class Conv(Module):
@@ -28,10 +29,24 @@ class Conv(Module):
         self.stride = stride
 
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.weight = Parameter(init.kaiming_uniform(kernel_size ** 2 * in_channels, kernel_size ** 2 * out_channels, 
+                                        (kernel_size, kernel_size, in_channels, out_channels)), 
+                                       device=device, dtype=dtype, requires_grad=True)
+        if bias:
+            bound = 1.0 / (in_channels * kernel_size ** 2) ** 0.5
+            self.bias = Parameter(init.rand(out_channels, low=-bound, high=bound),
+                                  device=device, dtype=dtype, requires_grad=True)
+            
+        self.padding = (kernel_size - 1) // 2
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        x = x.transpose((1,3)).transpose((1,2))
+        out = ops.conv(x, self.weight, stride=self.stride, padding=self.padding)
+
+        if self.bias:
+            out += ops.broadcast_to(self.bias.reshape((1, 1, 1, self.out_channels)), out.shape)
+        
+        return out.transpose((1,2)).transpose((1,3))
         ### END YOUR SOLUTION

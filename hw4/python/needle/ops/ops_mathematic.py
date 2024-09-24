@@ -8,6 +8,7 @@ from ..autograd import Op, Tensor, Value, TensorOp
 from ..autograd import TensorTuple, TensorTupleOp
 import numpy
 import math
+import numpy as np
 
 # NOTE: we will import numpy as the array_api
 # as the backend for our computations, this line will change in later homeworks
@@ -503,12 +504,26 @@ class Conv(TensorOp):
             A = A.as_strided((N, H_new, W_new, K, K, C_in), strides=(Ns, Hs, Ws, Hs, Ws, Cs)).compact()
             A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
             B = B.compact().reshape((K * K * C_in, C_out))
-        return A @ B
+        return (A @ B).reshape((N, H_new, W_new, C_out))
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        Input, Kernel = node.inputs
+
+        K = Kernel.shape[0]
+
+        if self.stride > 1:
+            out_grad = dilate(out_grad, (1, 2), self.stride - 1)
+
+        Kernel_flip = flip(Kernel, (0, 1)).transpose((2, 3))
+
+        Kernel_grad = conv(out_grad, Kernel_flip, padding=K - 1 - self.padding)
+
+        Input = Input.transpose((0, 3))
+        out_grad = out_grad.transpose((0, 1)).transpose((1, 2))
+        Input_grad = conv(Input, out_grad, padding=self.padding).transpose((0, 1)).transpose((1, 2))
+        return Tensor(np.ascontiguousarray(Kernel_grad.numpy())), Tensor(np.ascontiguousarray(Input_grad.numpy()))
         ### END YOUR SOLUTION
 
 
