@@ -213,7 +213,11 @@ class BroadcastTo(TensorOp):
             if ori == trg:
                 axes[len(ori_shape) - i - 1] = -1
         axes = tuple(filter(lambda x: x >= 0, axes))
-        return out_grad.sum(axes).reshape(target_shape)
+
+        grad = out_grad
+        for axis in axes:
+            grad = summation(grad, axis, keepdims=True)
+        return grad.reshape(target_shape)
         ### END YOUR SOLUTION
 
 
@@ -222,12 +226,13 @@ def broadcast_to(a, shape):
 
 
 class Summation(TensorOp):
-    def __init__(self, axes: Optional[tuple] = None):
+    def __init__(self, axes: Optional[tuple] = None, keepdims=False):
         self.axes = axes
+        self.keepdims = keepdims
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return array_api.sum(a, axis=self.axes)
+        return array_api.sum(a, axis=self.axes, keepdims=self.keepdims)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
@@ -247,8 +252,8 @@ class Summation(TensorOp):
         ### END YOUR SOLUTION
 
 
-def summation(a, axes=None):
-    return Summation(axes)(a)
+def summation(a, axes=None, keepdims=False):
+    return Summation(axes, keepdims=keepdims)(a)
 
 
 class MatMul(TensorOp):
@@ -493,18 +498,21 @@ class Conv(TensorOp):
         Ns, Hs, Ws, Cs = A.strides
 
         if self.stride > 1:
-            H_new = (H - K + 1) // self.stride
-            W_new = (W - K + 1) // self.stride
+            H_new = (H - K) // self.stride + 1
+            W_new = (W - K) // self.stride + 1
             A = A.as_strided((N, H_new, W_new, K, K, C_in), strides=(Ns, Hs * self.stride, Ws * self.stride, Hs, Ws, Cs)).compact()
-            A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
-            B = B.compact().reshape((K * K * C_in, C_out))
+            
         else:
             H_new = H - K + 1
             W_new = W - K + 1
             A = A.as_strided((N, H_new, W_new, K, K, C_in), strides=(Ns, Hs, Ws, Hs, Ws, Cs)).compact()
-            A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
-            B = B.compact().reshape((K * K * C_in, C_out))
-        return (A @ B).reshape((N, H_new, W_new, C_out))
+
+        A = A.reshape((math.prod(A.shape[:-3]), K * K * C_in))
+        B = B.compact()
+        out = A @ B.reshape((K * K * C_in, C_out))
+
+        out = out.reshape((N, H_new, W_new, C_out))
+        return out
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
@@ -521,9 +529,9 @@ class Conv(TensorOp):
         Kernel_grad = conv(out_grad, Kernel_flip, padding=K - 1 - self.padding)
 
         Input = Input.transpose((0, 3))
-        out_grad = out_grad.transpose((0, 1)).transpose((1, 2))
-        Input_grad = conv(Input, out_grad, padding=self.padding).transpose((0, 1)).transpose((1, 2))
-        return Tensor(np.ascontiguousarray(Kernel_grad.numpy())), Tensor(np.ascontiguousarray(Input_grad.numpy()))
+        out_grad = out_grad.transpose((0, 2)).transpose((0, 1))
+        Input_grad = conv(Input, out_grad, padding=self.padding).transpose((0, 2)).transpose((0, 1))
+        return Kernel_grad, Input_grad
         ### END YOUR SOLUTION
 
 

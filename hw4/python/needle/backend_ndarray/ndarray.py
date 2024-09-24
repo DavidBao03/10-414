@@ -555,8 +555,8 @@ class NDArray:
 
         if axis is None:
             view = self.compact().reshape((1,) * (self.ndim - 1) + (prod(self.shape),))
-            #out = NDArray.make((1,) * self.ndim, device=self.device)
-            out = NDArray.make((1,), device=self.device)
+            # out = NDArray.make((1,) * self.ndim, device=self.device)
+            out = NDArray.make((1,), device=self.device) 
 
         else:
             if isinstance(axis, (tuple, list)):
