@@ -590,7 +590,21 @@ class NDArray:
         Note: compact() before returning.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        offset = 0
+        strides = list(self._strides)
+        ori_offset = [0] * len(self.shape)
+        # (0, 1) -> (3, 2, 4)
+        for axis in axes:
+            ori_offset[axis] = self.shape[axis] - 1
+
+        # ori_offset = [2, 1, 0]
+        for stride, start in zip(self.strides, ori_offset):
+            offset += stride * start
+        
+        for axis in axes:
+            strides[axis] = -strides[axis]
+        
+        return NDArray.make(self.shape, tuple(strides), self.device, self._handle, offset).compact()
         ### END YOUR SOLUTION
 
     def pad(self, axes):
@@ -600,7 +614,11 @@ class NDArray:
         axes = ( (0, 0), (1, 1), (0, 0)) pads the middle axis with a 0 on the left and right side.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        out_shape = tuple([dim + axis[0] + axis[1] for dim, axis in zip(self.shape, axes)])
+        out = empty(out_shape, dtype=self.dtype, device=self.device)
+        tuple_slice = tuple([slice(axis[0], axis[0] + dim) for dim, axis in zip(self.shape, axes)])
+        out[tuple_slice] = self
+        return out
         ### END YOUR SOLUTION
 
 def array(a, dtype="float32", device=None):

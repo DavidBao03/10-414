@@ -410,12 +410,12 @@ class Flip(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.flip(a, self.axes)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return flip(out_grad, self.axes)
         ### END YOUR SOLUTION
 
 
