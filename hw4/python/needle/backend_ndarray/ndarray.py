@@ -685,7 +685,7 @@ def stack(arrays, axis:int = 0):
         target_slice[axis] = i
         out[tuple(target_slice)] = array
     
-    return out.compact()
+    return out
 
 def split(a, axis:int = 0):
     out_shape = list(a.shape)
@@ -698,4 +698,4 @@ def split(a, axis:int = 0):
         target_slice[axis] = i
         out_arrays.append(a[tuple(target_slice)].compact().reshape(out_shape))
     
-    return out_arrays.compact()
+    return out_arrays
