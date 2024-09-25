@@ -14,7 +14,7 @@ class Sigmoid(Module):
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return  1.0 / 1.0 + x.exp()
         ### END YOUR SOLUTION
 
 class RNNCell(Module):
@@ -38,7 +38,35 @@ class RNNCell(Module):
         """
         super().__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        bound = np.sqrt(1.0 / hidden_size)
+        self.W_ih = Parameter(init.rand(input_size, hidden_size, 
+                                        low=-bound, high=bound, 
+                                        device=device, dtype=dtype,requires_grad=True))
+        
+        self.W_hh = Parameter(init.rand(hidden_size, hidden_size, 
+                                        low=-bound, high=bound, 
+                                        device=device, dtype=dtype,requires_grad=True))
+        if bias:
+            self.bias_ih = Parameter(init.rand(hidden_size, 
+                                            low=-bound, high=bound, 
+                                            device=device, dtype=dtype,requires_grad=True))
+            
+            self.bias_hh = Parameter(init.rand(hidden_size, 
+                                            low=-bound, high=bound, 
+                                            device=device, dtype=dtype,requires_grad=True))
+        else:
+            self.bias_ih = None
+            self.bias_hh = None
+
+        self.nonlinearity = nonlinearity
+        
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        self.device = device
+        self.dtype = dtype
+        self.bias = bias
+
         ### END YOUR SOLUTION
 
     def forward(self, X, h=None):
@@ -53,7 +81,25 @@ class RNNCell(Module):
             for each element in the batch.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        batch_size = X.shape[0]
+        if h is None:
+            h = init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype)
+        
+        if self.bias:
+            bias_hh = self.bias_hh.reshape((1, self.hidden_size)).broadcast_to((batch_size, self.hidden_size))
+            bias_ih = self.bias_ih.reshape((1, self.hidden_size)).broadcast_to((batch_size, self.hidden_size))
+            out = X @ self.W_ih + h @ self.W_hh + bias_hh + bias_ih
+        else:
+            out = X @ self.W_ih + h @ self.W_hh
+        
+        if self.nonlinearity == "tanh":
+            out = ops.tanh(out)
+        elif self.nonlinearity == "relu":
+            out = ops.relu(out)
+        else:
+            raise ValueError("unsupported nonlinearity function. Only support ReLU and Tanh.")
+        
+        return out
         ### END YOUR SOLUTION
 
 
@@ -82,7 +128,16 @@ class RNN(Module):
         """
         super().__init__()
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.num_layers = num_layers
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+
+        self.device = device
+        self.dtype = dtype
+        self.bias = bias
+
+        self.rnn_cells = [RNNCell(input_size, hidden_size, bias, nonlinearity, device, dtype)] + \
+                         [RNNCell(hidden_size, hidden_size, bias, nonlinearity, device, dtype) for _ in range(num_layers - 1)]
         ### END YOUR SOLUTION
 
     def forward(self, X, h0=None):
@@ -98,7 +153,21 @@ class RNN(Module):
         h_n of shape (num_layers, bs, hidden_size) containing the final hidden state for each element in the batch.
         """
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        batch_size= X.shape[1]
+        if h0 is None:
+            h0 = [init.zeros(batch_size, self.hidden_size, device=self.device, dtype=self.dtype) for _ in range(self.num_layers)]
+        else:
+            h0 = list(ops.split(h0, axis=0))
+
+        h_n = []
+        inputs = list(ops.split(X, axis=0))
+        for i, layer in enumerate(self.rnn_cells):
+            for t, input in enumerate(inputs):
+                h0[i] = layer(input, h0[i])
+                inputs[t] = h0[i]
+            h_n.append(h0[i])
+        
+        return ops.stack(inputs, axis=0), ops.stack(h_n, axis=0)
         ### END YOUR SOLUTION
 
 
