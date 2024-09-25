@@ -14,6 +14,8 @@ from apps.models import *
 import time
 device = ndl.cpu()
 
+from tqdm import tqdm
+
 def parse_mnist(image_filesname, label_filename):
     """Read an images and labels file in MNIST format.  See this page:
     http://yann.lecun.com/exdb/mnist/ for a description of the file format.
@@ -120,7 +122,7 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     ### END YOUR SOLUTION
 
 ### CIFAR-10 training ###
-def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None):
+def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None, device=ndl.cpu()):
     """
     Iterates over the dataloader. If optimizer is not None, sets the
     model to train mode, and for each batch updates the model parameters.
@@ -142,7 +144,7 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
     correct, total_loss = 0, 0
     if opt is None:
         model.eval()
-        for batch in dataloader:
+        for batch in tqdm(dataloader, total=len(dataloader.dataset) // dataloader.batch_size):
             X, y = batch
             X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
             out = model(X)
@@ -151,7 +153,7 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
             total_loss += loss.data.numpy() * y.shape[0]
     else:
         model.train()
-        for batch in dataloader:
+        for batch in tqdm(dataloader, total=len(dataloader.dataset) // dataloader.batch_size):
             X, y = batch
             X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
             out = model(X)
@@ -167,7 +169,7 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
 
 
 def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
-          lr=0.001, weight_decay=0.001, loss_fn=nn.SoftmaxLoss):
+          lr=0.001, weight_decay=0.001, loss_fn=nn.SoftmaxLoss, device=ndl.cpu()):
     """
     Performs {n_epochs} epochs of training.
 
@@ -189,12 +191,12 @@ def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
     opt = optimizer(model.parameters(), lr=lr, weight_decay=weight_decay)
     loss_model = loss_fn()
     for epoch in range(n_epochs):
-        avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_model, opt=opt)
+        avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_model, opt=opt, device=device)
         print(f"Epoch: {epoch}, Acc: {avg_acc}, Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
 
-def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
+def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss, device=ndl.cpu()):
     """
     Computes the test accuracy and loss of the model.
 
@@ -209,7 +211,8 @@ def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_fn)
+    loss_model = loss_fn()
+    avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_model, device=device)
     print(f"Evaluation Acc: {avg_acc}, Evaluation Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
