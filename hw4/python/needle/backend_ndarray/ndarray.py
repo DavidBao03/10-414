@@ -248,8 +248,10 @@ class NDArray:
         """
 
         ### BEGIN YOUR SOLUTION
-        if not self.is_compact() or prod(new_shape) != prod(self.shape):
-            raise ValueError("cannot reshape")
+        if prod(self.shape) != prod(new_shape):
+            raise RuntimeError("the product of current shape is not equal to the product of the new shape")
+        if not self.is_compact():
+            raise RuntimeError("the matrix is not compact")
         
         return self.as_strided(new_shape, NDArray.compact_strides(new_shape))
         ### END YOUR SOLUTION
@@ -618,7 +620,7 @@ class NDArray:
         out = full(out_shape, 0.0, dtype=self.dtype, device=self.device)
         tuple_slice = tuple([slice(axis[0], axis[0] + dim) for dim, axis in zip(self.shape, axes)])
         out[tuple_slice] = self
-        return out
+        return out.compact()
         ### END YOUR SOLUTION
 
 def array(a, dtype="float32", device=None):
@@ -683,7 +685,7 @@ def stack(arrays, axis:int = 0):
         target_slice[axis] = i
         out[tuple(target_slice)] = array
     
-    return out
+    return out.compact()
 
 def split(a, axis:int = 0):
     out_shape = list(a.shape)
@@ -696,4 +698,4 @@ def split(a, axis:int = 0):
         target_slice[axis] = i
         out_arrays.append(a[tuple(target_slice)].compact().reshape(out_shape))
     
-    return out_arrays
+    return out_arrays.compact()

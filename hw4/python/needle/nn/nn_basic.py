@@ -106,7 +106,11 @@ class Linear(Module):
 class Flatten(Module):
     def forward(self, X):
         ### BEGIN YOUR SOLUTION
-        return X.reshape((X.shape[0], -1))
+        batch_size = X.shape[0]
+        dim = 1
+        for i in range(1, len(X.shape)):
+            dim *= X.shape[i]
+        return ops.reshape(X, (batch_size, dim))
         ### END YOUR SOLUTION
 
 
@@ -145,24 +149,28 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        self.weight  = Parameter(init.ones(dim, requires_grad=True))
-        self.bias = Parameter(init.zeros(dim, requires_grad=True))
-        self.running_mean = init.zeros(dim)
-        self.running_var = init.ones(dim)
+        self.weight  = Parameter(init.ones(dim, device=device, dtype=dtype, requires_grad=True))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype, requires_grad=True))
+        self.running_mean = init.zeros(dim, device=device, dtype=dtype)
+        self.running_var = init.ones(dim, device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
+        # x: (N, d_model)
         if self.training:
-            mean = (x.sum((0,)) / x.shape[0])
-            std = ((x - mean.broadcast_to(x.shape)) ** 2).sum((0,)) / x.shape[0]
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean.data
-            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * std.data
-            norm = (x - mean.broadcast_to(x.shape)) / (std.broadcast_to(x.shape) + self.eps)**0.5
-            return self.weight.broadcast_to(x.shape) * norm + self.bias.broadcast_to(x.shape)
+            batch_mean = (x.sum((0,)) / x.shape[0]) # (d_model, )
+            batch_mean_vec = batch_mean.reshape((1, x.shape[1])) # (1, d_model)
+            batch_var = (((x - batch_mean_vec.broadcast_to(x.shape))**2).sum((0,)) / x.shape[0]) # (d_model, )
+            batch_var_vec = batch_var.reshape((1, x.shape[1])) # (1, d_model)
+            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * batch_mean.data
+            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * batch_var.data
+            norm = (x - batch_mean_vec.broadcast_to(x.shape)) / (batch_var_vec.broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.reshape((1, x.shape[1])).broadcast_to(x.shape) * norm \
+                 + self.bias.reshape((1, x.shape[1])).broadcast_to(x.shape)
         else:
-            norm = (x - self.running_mean.broadcast_to(x.shape)) / (self.running_var.broadcast_to(x.shape) + self.eps)**0.5
-            return self.weight.broadcast_to(x.shape) * norm + self.bias.broadcast_to(x.shape)
+            norm = (x - self.running_mean.reshape((1, x.shape[1])).broadcast_to(x.shape)) / (self.running_var.reshape((1, x.shape[1])).broadcast_to(x.shape) + self.eps)**0.5
+            return self.weight.reshape((1, x.shape[1])).broadcast_to(x.shape) * norm + self.bias.reshape((1, x.shape[1])).broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 class BatchNorm2d(BatchNorm1d):

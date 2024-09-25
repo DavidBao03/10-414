@@ -37,7 +37,18 @@ def parse_mnist(image_filesname, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    with gzip.open(image_filesname, 'rb') as img_file:
+        magic_num, img_num, row, col = struct.unpack(">4i", img_file.read(16))
+        assert magic_num == 2051
+        X = np.frombuffer(img_file.read(img_num * row * col), dtype=np.uint8).astype(np.float32).reshape((img_num, row * col))
+        X /= 255.0
+    
+    with gzip.open(label_filename, 'rb') as label_file:
+        magic_num, label_num = struct.unpack(">2i", label_file.read(8))
+        assert magic_num == 2049
+        y = np.frombuffer(label_file.read(label_num), dtype=np.uint8)
+    
+    return X, y
     ### END YOUR SOLUTION
 
 
@@ -58,7 +69,7 @@ def softmax_loss(Z, y_one_hot):
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    return (ndl.log(ndl.exp(Z).sum((1,))).sum() - (y_one_hot * Z).sum()) / Z.shape[0]
     ### END YOUR SOLUTION
 
 
@@ -87,7 +98,25 @@ def nn_epoch(X, y, W1, W2, lr=0.1, batch=100):
     """
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    iterations = (y.size + batch - 1) // batch
+    for i in range(iterations):
+        train_set = ndl.Tensor(X[i * batch : (i+1) * batch, :])
+        label_set = y[i * batch : (i+1) * batch]
+
+        Z = ndl.relu((train_set.matmul(W1))).matmul(W2)
+
+        Y = np.zeros((batch, W2.shape[1]))
+        Y[np.arange(batch), label_set] = 1
+        Y = ndl.Tensor(Y)
+        
+        loss = softmax_loss(Z, Y)
+
+        loss.backward()
+
+        W1 = ndl.Tensor(W1 - lr * W1.grad)
+        W2 = ndl.Tensor(W2 - lr * W2.grad)
+
+    return W1, W2
     ### END YOUR SOLUTION
 
 ### CIFAR-10 training ###
@@ -110,7 +139,30 @@ def epoch_general_cifar10(dataloader, model, loss_fn=nn.SoftmaxLoss(), opt=None)
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    correct, total_loss = 0, 0
+    if opt is None:
+        model.eval()
+        for batch in dataloader:
+            X, y = batch
+            X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
+            out = model(X)
+            loss = loss_fn(out, y)
+            correct += np.sum(np.argmax(out.numpy(), axis=1) == y.numpy())
+            total_loss += loss.data.numpy() * y.shape[0]
+    else:
+        model.train()
+        for batch in dataloader:
+            X, y = batch
+            X, y = ndl.Tensor(X, device=device), ndl.Tensor(y, device=device)
+            out = model(X)
+            loss = loss_fn(out, y)
+            loss.backward()
+            opt.step()
+            correct += np.sum(np.argmax(out.numpy(), axis=1) == y.numpy())
+            total_loss += loss.data.numpy() * y.shape[0]
+
+    sample_nums = len(dataloader.dataset)
+    return correct / sample_nums, total_loss / sample_nums
     ### END YOUR SOLUTION
 
 
@@ -134,7 +186,11 @@ def train_cifar10(model, dataloader, n_epochs=1, optimizer=ndl.optim.Adam,
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    opt = optimizer(model.parameters(), lr=lr, weight_decay=weight_decay)
+    loss_model = loss_fn()
+    for epoch in range(n_epochs):
+        avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_model, opt=opt)
+        print(f"Epoch: {epoch}, Acc: {avg_acc}, Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
 
@@ -153,7 +209,8 @@ def evaluate_cifar10(model, dataloader, loss_fn=nn.SoftmaxLoss):
     """
     np.random.seed(4)
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    avg_acc, avg_loss = epoch_general_cifar10(dataloader, model, loss_fn=loss_fn)
+    print(f"Evaluation Acc: {avg_acc}, Evaluation Loss: {avg_loss}")
     ### END YOUR SOLUTION
 
 

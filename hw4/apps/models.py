@@ -6,17 +6,58 @@ import math
 import numpy as np
 np.random.seed(0)
 
+def ConvBN(in_channels, out_channels, kernel_size, stride, device, dtype):
+    return nn.Sequential(
+        nn.Conv(in_channels, out_channels, kernel_size, stride=stride, bias=True, device=device, dtype=dtype),
+        nn.BatchNorm2d(out_channels, device=device, dtype=dtype),
+        nn.ReLU()
+    )
 
 class ResNet9(ndl.nn.Module):
     def __init__(self, device=None, dtype="float32"):
         super().__init__()
         ### BEGIN YOUR SOLUTION ###
-        raise NotImplementedError() ###
+        self.convBN1 = ConvBN(3, 16, 7, 4, device=device, dtype=dtype)
+        self.convBN2 = ConvBN(16, 32, 3, 2, device=device, dtype=dtype)
+
+        module1 = nn.Sequential(
+            ConvBN(32, 32, 3, 1, device=device, dtype=dtype),
+            ConvBN(32, 32, 3, 1, device=device, dtype=dtype)
+        )
+        self.residual1 = nn.Residual(module1)
+
+        self.convBN3 = ConvBN(32, 64, 3, 2, device=device, dtype=dtype)
+        self.convBN4 = ConvBN(64, 128, 3, 2, device=device, dtype=dtype)
+
+        module2 = nn.Sequential(
+            ConvBN(128, 128, 3, 1, device=device, dtype=dtype),
+            ConvBN(128, 128, 3, 1, device=device, dtype=dtype)
+        )
+        self.residual2 = nn.Residual(module2)
+
+        self.linear1 = nn.Linear(128, 128, device=device, dtype=dtype)
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(128, 10, device=device, dtype=dtype)
+
+        self.flatten = nn.Flatten()
         ### END YOUR SOLUTION
 
     def forward(self, x):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        x = self.convBN1(x)
+        x = self.convBN2(x)
+        x = self.residual1(x)
+
+        x = self.convBN3(x)
+        x = self.convBN4(x)
+        x = self.residual2(x)
+
+        x = self.flatten(x)
+        x = self.linear1(x)
+        x = self.relu(x)
+        x = self.linear2(x)
+
+        return x
         ### END YOUR SOLUTION
 
 
