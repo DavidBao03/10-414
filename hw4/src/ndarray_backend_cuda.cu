@@ -428,11 +428,15 @@ __global__ void MatMulKernel(scalar_t* a, scalar_t* b, scalar_t* out, uint32_t M
 
   for(size_t i = 0; i < cnt; i++)
   {
-    if((i * TILE + thread_y) < N)
+    if (x < M && (i * TILE + thread_y) < N)
       a_tile[thread_x][thread_y] = a[x * N + i * TILE + thread_y];
+    else
+      a_tile[thread_x][thread_y] = 0;
 
-    if((i * TILE + thread_x) < N)
+    if (x < P && (i * TILE + thread_x) < N)
       b_tile[thread_x][thread_y] = b[y + (i * TILE + thread_x) * P];
+    else
+      b_tile[thread_x][thread_y] = 0;
 
     __syncthreads();
 
