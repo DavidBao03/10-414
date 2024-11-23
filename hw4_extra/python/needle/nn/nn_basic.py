@@ -193,8 +193,8 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        self.weight  = Parameter(init.ones(dim, requires_grad=True))
-        self.bias = Parameter(init.zeros(dim, requires_grad=True))
+        self.weight  = Parameter(init.ones(dim, requires_grad=True), device=device, dtype=dtype)
+        self.bias = Parameter(init.zeros(dim, requires_grad=True), device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
